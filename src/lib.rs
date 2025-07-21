@@ -21,6 +21,7 @@
 //! Server `receive_local_mr`, and then get data from this mr.
 //!
 //! ```
+//! 
 //! use async_rdma::{LocalMrReadAccess, LocalMrWriteAccess, RdmaBuilder};
 //! use portpicker::pick_unused_port;
 //! use std::{
@@ -1742,7 +1743,7 @@ impl Rdma {
                 "Atomic operations are legal only when the remote address is on a naturally-aligned 8-byte boundary",
             ))
         } else {
-            let buf = self.alloc_local_mr(std::alloc::Layout::new::<[u8; 8]>())?;
+            let buf = self.alloc_local_mr(Layout::new::<[u8; 8]>())?;
             self.qp.atomic_cas(old_value, new_value, &buf, rm).await
         }
     }

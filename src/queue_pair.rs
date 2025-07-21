@@ -719,7 +719,7 @@ impl QueuePair {
     where
         LR: LocalMrReadAccess,
     {
-        let mut bad_wr = std::ptr::null_mut::<ibv_send_wr>();
+        let mut bad_wr = ptr::null_mut::<ibv_send_wr>();
         let mut send_attr = SendWr::new_send(lms, wr_id, imm);
         self.cq_event_listener.cq.req_notify(false)?;
         for lm in lms {
@@ -755,7 +755,7 @@ impl QueuePair {
         LW: LocalMrWriteAccess,
     {
         let mut recv_attr = RecvWr::new_recv(lms, wr_id);
-        let mut bad_wr = std::ptr::null_mut::<ibv_recv_wr>();
+        let mut bad_wr = ptr::null_mut::<ibv_recv_wr>();
         self.cq_event_listener.cq.req_notify(false)?;
         for lm in lms {
             debug!(
@@ -790,7 +790,7 @@ impl QueuePair {
         LW: LocalMrWriteAccess,
         RR: RemoteMrReadAccess,
     {
-        let mut bad_wr = std::ptr::null_mut::<ibv_send_wr>();
+        let mut bad_wr = ptr::null_mut::<ibv_send_wr>();
         let mut send_attr = SendWr::new_read(lms, wr_id, rm);
         self.cq_event_listener.cq.req_notify(false)?;
         for lm in lms {
@@ -832,7 +832,7 @@ impl QueuePair {
         LR: LocalMrReadAccess,
         RW: RemoteMrWriteAccess,
     {
-        let mut bad_wr = std::ptr::null_mut::<ibv_send_wr>();
+        let mut bad_wr = ptr::null_mut::<ibv_send_wr>();
         let mut send_attr = SendWr::new_write(lms, wr_id, rm, imm);
         self.cq_event_listener.cq.req_notify(false)?;
         for lm in lms {
@@ -876,7 +876,7 @@ impl QueuePair {
         RW: RemoteMrWriteAccess,
     {
         let mut cas_wr = SendWr::new_cas(old_value, new_value, buf, rm, wr_id);
-        let mut bad_wr = std::ptr::null_mut::<ibv_send_wr>();
+        let mut bad_wr = ptr::null_mut::<ibv_send_wr>();
         self.cq_event_listener.cq.req_notify(false)?;
 
         // SAFETY: ffi

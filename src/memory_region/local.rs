@@ -554,11 +554,11 @@ impl Drop for LocalMrInner {
     fn drop(&mut self) {
         debug!("drop LocalMr {:?}", self);
         match self.strategy {
-            crate::MRManageStrategy::Jemalloc => {
+            MRManageStrategy::Jemalloc => {
                 // SAFETY: ffi
                 unsafe { tikv_jemalloc_sys::free(self.addr as *mut libc::c_void) }
             }
-            crate::MRManageStrategy::Raw => {
+            MRManageStrategy::Raw => {
                 // SAFETY: The ptr is allocated via this allocator, and the layout is the same layout
                 // that was used to allocate that block of memory.
                 unsafe {

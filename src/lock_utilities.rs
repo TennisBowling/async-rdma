@@ -129,6 +129,7 @@ impl<'a, T> MappedRwLockWriteGuard<'a, T> {
 /// Insert `ArcRwLockGuard` to a map and remove it when the corresponding
 /// `LocalMrInner`'s RDMA operation is done to ensure that mr will not be misused during ops.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub(crate) enum ArcRwLockGuard {
     /// An RAII rwlock guard returned by the `rwlock.read_arc()`
     RwLockReadGuard(ArcRwLockReadGuard<RawRwLock, LocalMrInner>),

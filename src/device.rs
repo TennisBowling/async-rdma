@@ -10,7 +10,7 @@ use std::io;
 use std::ops::Deref;
 use std::os::raw::c_int;
 use std::ptr::NonNull;
-use std::{fmt, mem, slice};
+use std::{fmt, slice};
 
 use numeric_cast::NumericCast;
 use scopeguard::guard_on_unwind;
@@ -67,8 +67,8 @@ impl DeviceList {
 
             let len: usize = num_devices.numeric_cast();
 
-            if mem::size_of::<c_int>() >= mem::size_of::<usize>() {
-                let total_size = len.saturating_mul(mem::size_of::<*mut ibv_device>());
+            if size_of::<c_int>() >= size_of::<usize>() {
+                let total_size = len.saturating_mul(size_of::<*mut ibv_device>());
                 assert!(total_size < usize::MAX.wrapping_div(2));
             }
 
