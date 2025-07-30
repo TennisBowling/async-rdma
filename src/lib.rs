@@ -1156,13 +1156,18 @@ impl RdmaBuilder {
     /// 
     /// This is a convenience method that combines find_settings() with listen().
     /// It will automatically discover working RDMA settings and then listen for connections.
-    pub async fn auto_listen<A: ToSocketAddrs>(addr: A) -> io::Result<Rdma> {
+    /// 
+    /// # Arguments
+    /// * `addr` - The address to listen on
+    /// * `max_message_length` - Maximum message length for RDMA operations
+    pub async fn auto_listen<A: ToSocketAddrs>(addr: A, max_message_length: usize) -> io::Result<Rdma> {
         let settings = Self::find_settings()?;
         info!("Using auto-discovered settings for listen: {:?}", settings);
         
         let builder = RdmaBuilder::default()
             .set_port_num(settings.port_num)
-            .set_gid_index(settings.gid_index);
+            .set_gid_index(settings.gid_index)
+            .set_max_message_length(max_message_length);
             
         let builder = if let Some(device_name) = &settings.device_name {
             builder.set_dev(device_name)
@@ -1177,13 +1182,18 @@ impl RdmaBuilder {
     /// 
     /// This is a convenience method that combines find_settings() with connect().
     /// It will automatically discover working RDMA settings and then connect to the remote endpoint.
-    pub async fn auto_connect<A: ToSocketAddrs>(addr: A) -> io::Result<Rdma> {
+    /// 
+    /// # Arguments
+    /// * `addr` - The address to connect to
+    /// * `max_message_length` - Maximum message length for RDMA operations
+    pub async fn auto_connect<A: ToSocketAddrs>(addr: A, max_message_length: usize) -> io::Result<Rdma> {
         let settings = Self::find_settings()?;
         info!("Using auto-discovered settings for connect: {:?}", settings);
         
         let builder = RdmaBuilder::default()
             .set_port_num(settings.port_num)
-            .set_gid_index(settings.gid_index);
+            .set_gid_index(settings.gid_index)
+            .set_max_message_length(max_message_length);
             
         let builder = if let Some(device_name) = &settings.device_name {
             builder.set_dev(device_name)

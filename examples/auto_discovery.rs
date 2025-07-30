@@ -34,9 +34,10 @@ async fn main() -> io::Result<()> {
     
     // Test auto-listen (in a real scenario, this would be run in a separate task)
     println!("Testing RdmaBuilder::auto_listen()...");
-    match RdmaBuilder::auto_listen(addr).await {
+    let max_msg_len = 1024; // 1KB max message length
+    match RdmaBuilder::auto_listen(addr, max_msg_len).await {
         Ok(_rdma) => {
-            println!("✅ Auto-listen succeeded");
+            println!("✅ Auto-listen succeeded with max_message_length: {}", max_msg_len);
             
             // In a real application, you would now use this RDMA connection
             // For this example, we'll just print success and move on
@@ -48,9 +49,9 @@ async fn main() -> io::Result<()> {
 
     // Test auto-connect (would typically connect to the auto-listen server)
     println!("\nTesting RdmaBuilder::auto_connect()...");
-    match RdmaBuilder::auto_connect("127.0.0.1:12345").await {
+    match RdmaBuilder::auto_connect("127.0.0.1:12345", max_msg_len).await {
         Ok(_rdma) => {
-            println!("✅ Auto-connect succeeded");
+            println!("✅ Auto-connect succeeded with max_message_length: {}", max_msg_len);
             // Note: This will likely fail since there's no server listening
         }
         Err(e) => {
@@ -61,7 +62,7 @@ async fn main() -> io::Result<()> {
     println!("\n=== Example Complete ===");
     println!("The auto-discovery functionality is working!");
     println!("Use RdmaBuilder::find_settings() to discover settings,");
-    println!("or use RdmaBuilder::auto_listen()/auto_connect() for convenience.");
+    println!("or use RdmaBuilder::auto_listen(addr, max_msg_len)/auto_connect(addr, max_msg_len) for convenience.");
 
     Ok(())
 }
