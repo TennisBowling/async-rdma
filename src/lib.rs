@@ -202,9 +202,10 @@ use tokio::{
     net::{TcpListener, TcpStream, ToSocketAddrs},
     sync::{mpsc, Mutex},
 };
-use tracing::debug;
+use tracing::{debug, info, warn};
 
 use crate::queue_pair::builders_into_attrs;
+use crate::device::DeviceList;
 use getset::{CopyGetters, Getters, MutGetters, Setters};
 pub use gid::Gid;
 pub use queue_pair::{QueuePairEndpoint, QueuePairEndpointBuilder, QueuePairState, MTU};
@@ -324,6 +325,17 @@ impl Default for AgentInitAttr {
             pt_type: PollingTriggerType::default(),
         }
     }
+}
+
+/// Auto-discovered RDMA settings
+#[derive(Debug, Clone)]
+pub struct RdmaSettings {
+    /// Device name that was found to work
+    pub device_name: Option<String>,
+    /// Port number that was found to work
+    pub port_num: u8,
+    /// GID index that was found to work  
+    pub gid_index: usize,
 }
 
 /// The builder for the `Rdma`, it follows the builder pattern.
@@ -1078,6 +1090,108 @@ impl RdmaBuilder {
     pub fn set_polling_trigger(mut self, pt_type: PollingTriggerType) -> Self {
         self.agent_attr.pt_type = pt_type;
         self
+    }
+
+    /// Auto-discover working RDMA settings by testing all combinations of devices, ports, and GID indexes
+    /// 
+    /// This method iterates through all available RDMA devices, their ports, and GID indexes to find
+    /// a working configuration. It returns the first combination that successfully creates a Context.
+    pub fn find_settings() -> io::Result<RdmaSettings> {
+        info!("Starting RDMA auto-discovery");
+        
+        let dev_list = DeviceList::available()?;
+        if dev_list.is_empty() {
+            warn!("No RDMA devices available");
+            return Err(io::Error::new(io::ErrorKind::NotFound, "No RDMA devices found"));
+        }
+
+        info!("Found {} RDMA device(s)", dev_list.len());
+
+        // Try each device
+        for (dev_idx, device) in dev_list.iter().enumerate() {
+            let device_name = device.name();
+            info!("Testing device {}: {}", dev_idx, device_name);
+
+            // Try ports 1-8 (typical range for RDMA devices)
+            for port_num in 1..=8u8 {
+                debug!("Testing device {} port {}", device_name, port_num);
+                
+                // Try to open context to check if port exists and get port attributes
+                let context_result = Context::open(Some(device_name), port_num, 0);
+                if context_result.is_err() {
+                    debug!("Port {} not available on device {}", port_num, device_name);
+                    continue;
+                }
+
+                // Port exists, now find available GID indexes
+                // Try GID indexes 0-15 (typical range)
+                for gid_index in 0..16usize {
+                    debug!("Testing device {} port {} GID index {}", device_name, port_num, gid_index);
+                    
+                    match Context::open(Some(device_name), port_num, gid_index) {
+                        Ok(_context) => {
+                            let settings = RdmaSettings {
+                                device_name: Some(device_name.to_string()),
+                                port_num,
+                                gid_index,
+                            };
+                            info!("Found working RDMA settings: {:?}", settings);
+                            return Ok(settings);
+                        }
+                        Err(e) => {
+                            debug!("Failed to open context for device {} port {} GID {}: {}", 
+                                   device_name, port_num, gid_index, e);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
+        warn!("No working RDMA configuration found");
+        Err(io::Error::new(io::ErrorKind::NotFound, "No working RDMA configuration found"))
+    }
+
+    /// Automatically discover RDMA settings and listen on the specified address
+    /// 
+    /// This is a convenience method that combines find_settings() with listen().
+    /// It will automatically discover working RDMA settings and then listen for connections.
+    pub async fn auto_listen<A: ToSocketAddrs>(addr: A) -> io::Result<Rdma> {
+        let settings = Self::find_settings()?;
+        info!("Using auto-discovered settings for listen: {:?}", settings);
+        
+        let builder = RdmaBuilder::default()
+            .set_port_num(settings.port_num)
+            .set_gid_index(settings.gid_index);
+            
+        let builder = if let Some(device_name) = &settings.device_name {
+            builder.set_dev(device_name)
+        } else {
+            builder
+        };
+        
+        builder.listen(addr).await
+    }
+
+    /// Automatically discover RDMA settings and connect to the specified address
+    /// 
+    /// This is a convenience method that combines find_settings() with connect().
+    /// It will automatically discover working RDMA settings and then connect to the remote endpoint.
+    pub async fn auto_connect<A: ToSocketAddrs>(addr: A) -> io::Result<Rdma> {
+        let settings = Self::find_settings()?;
+        info!("Using auto-discovered settings for connect: {:?}", settings);
+        
+        let builder = RdmaBuilder::default()
+            .set_port_num(settings.port_num)
+            .set_gid_index(settings.gid_index);
+            
+        let builder = if let Some(device_name) = &settings.device_name {
+            builder.set_dev(device_name)
+        } else {
+            builder
+        };
+        
+        builder.connect(addr).await
     }
 }
 
