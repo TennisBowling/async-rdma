@@ -369,6 +369,24 @@ impl RdmaBuilder {
         )
     }
 
+    /// Create a `Rdma` from this builder with initialized agent
+    /// 
+    /// This method creates a fully functional Rdma instance by calling `build()` 
+    /// and then initializing the agent with the configured parameters.
+    /// Use this when you want a ready-to-use Rdma instance without needing to 
+    /// call connection methods like `ibv_connect()`.
+    #[inline]
+    pub async fn build_and_init(&self) -> io::Result<Rdma> {
+        let mut rdma = self.build()?;
+        if !rdma.raw {
+            rdma.init_agent(
+                self.agent_attr.max_message_length,
+                self.agent_attr.max_rmr_access,
+            ).await?;
+        }
+        Ok(rdma)
+    }
+
     /// Establish connection with RDMA server
     ///
     /// Used with `listen`
